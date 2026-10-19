@@ -60,6 +60,6 @@ Virtual Network Editor → vmnet8 → NAT Settings → Port Forwarding:
 
 | Наименование | Момент создания |
 |--------------|-----------------|
-| 01-clean-install | после установки ОС (удалены ранее запущенные контейнеры Docker Swarm), до настройки |
+| 01-clean-install | после установки ОС, до настройки |
 | 02-keys-configured | после создания пользователя devops и настройки ключей |
 | 03-ssh-hardened | после усиления SSH, настройки UFW и имени узла |
