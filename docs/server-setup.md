@@ -64,6 +64,7 @@ Virtual Network Editor → vmnet8 → NAT Settings → Port Forwarding:
 | 02-keys-configured | после создания пользователя devops и настройки ключей |
 | 03-ssh-hardened | после усиления SSH, настройки UFW и имени узла |
 | 04-nginx-https | после настройки Nginx и перевода ресурса на HTTPS |
+| 05-docker-compose | после запуска проекта «приложение + СУБД» в Docker Compose |
 
 ## 8. Веб-сервер
 
@@ -75,3 +76,14 @@ Virtual Network Editor → vmnet8 → NAT Settings → Port Forwarding:
 - Команда формирования: `openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/devops.key -out /etc/ssl/certs/devops.crt -subj "/CN=devops.local" -addext "subjectAltName=DNS:devops.local"`; срок действия – 365 дней (самоподписанный, SAN `DNS:devops.local`)
 - Журналы: `/var/log/nginx/devops-site.access.log`, `/var/log/nginx/devops-site.error.log`
 - Применение конфигурации: `sudo nginx -t && sudo systemctl reload nginx`
+
+## 9. Контейнеризация
+
+- Docker Engine 28.5.1 установлен из официального репозитория Docker (пакеты `docker-ce`, `docker-compose-plugin` 2.40.3); пакет `docker.io` не используется
+- Участники группы `docker`: `devops` (членство даёт права, фактически равные `root`)
+- Проект на сервере: `/home/devops/app` (доставка `rsync -avz --delete --exclude=.env --chmod=D755,F644 app/ devops:app/`)
+- Файл `.env`: `/home/devops/app/.env`, права `600`, владелец `devops`; в репозиторий не включается (`.gitignore`), шаблон – `app/.env.example`
+- Публикуемые порты: `127.0.0.1:5000` -> 5000 (приложение); порт СУБД 5432 не публикуется, приложение обращается к `db` через сеть проекта `app_backend`
+- Именованные тома: `app_db_data` (`/var/lib/postgresql/data`)
+- Обратный прокси: в блоке HTTPS файла `/etc/nginx/sites-available/devops-site` добавлен `location /app/` с `proxy_pass http://127.0.0.1:5000/` и заголовками `Host`, `X-Real-IP`, `X-Forwarded-For`, `X-Forwarded-Proto`; статический ресурс сохранён
+
