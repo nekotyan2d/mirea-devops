@@ -63,3 +63,15 @@ Virtual Network Editor → vmnet8 → NAT Settings → Port Forwarding:
 | 01-clean-install | после установки ОС, до настройки |
 | 02-keys-configured | после создания пользователя devops и настройки ключей |
 | 03-ssh-hardened | после усиления SSH, настройки UFW и имени узла |
+| 04-nginx-https | после настройки Nginx и перевода ресурса на HTTPS |
+
+## 8. Веб-сервер
+
+- Пакет: `nginx` (apt, версия 1.24.0 из репозитория Ubuntu)
+- Конфигурация ресурса: `/etc/nginx/sites-available/devops-site`, активирована ссылкой в `sites-enabled/`; стандартный ресурс `default` отключён (удалена ссылка)
+- Блок 1: `listen 80`, `server_name devops.local`, `return 301 https://$host$request_uri`; блок 2: `listen 443 ssl`, `ssl_protocols TLSv1.2 TLSv1.3`, `try_files $uri $uri/ =404`, `error_page 404 /404.html`
+- Каталог ресурса: `/var/www/devops-site`, владелец `devops:devops`, права `755` (каталог) и `644` (файлы); содержимое доставляется `scripts/deploy.sh` (`rsync --delete --chmod=D755,F644`)
+- Сертификат: `/etc/ssl/certs/devops.crt` (644, владелец root); закрытый ключ: `/etc/ssl/private/devops.key` (600, владелец root)
+- Команда формирования: `openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/devops.key -out /etc/ssl/certs/devops.crt -subj "/CN=devops.local" -addext "subjectAltName=DNS:devops.local"`; срок действия – 365 дней (самоподписанный, SAN `DNS:devops.local`)
+- Журналы: `/var/log/nginx/devops-site.access.log`, `/var/log/nginx/devops-site.error.log`
+- Применение конфигурации: `sudo nginx -t && sudo systemctl reload nginx`
