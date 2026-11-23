@@ -1,0 +1,47 @@
+- name: Ensure deployment account exists
+  ansible.builtin.user:
+    name: devops
+    shell: /bin/bash
+
+- name: Authorize existing deployment key
+  ansible.posix.authorized_key:
+    user: devops
+    key: "{{ lookup('ansible.builtin.file', ssh_public_key_file) }}"
+
+- name: Ensure unattended sudo
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/99-devops
+    content: "devops ALL=(ALL) NOPASSWD:ALL\n"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: /usr/sbin/visudo -cf %s
+
+- name: Enforce SSH authentication policy
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/00-pr11-auth.conf
+    content: |
+      PermitRootLogin no
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      PubkeyAuthentication yes
+    owner: root
+    group: root
+    mode: "0644"
+    validate: /usr/sbin/sshd -t -f %s
+  notify: Reload SSH
+
+- name: Keep existing SSH and HTTP access open
+  community.general.ufw:
+    rule: "{{ item.rule }}"
+    port: "{{ item.port }}"
+    proto: tcp
+  loop:
+    - { rule: limit, port: "{{ ansible_port | string }}" }
+    - { rule: allow, port: "80" }
+
+- name: Enable UFW with default deny for incoming traffic
+  community.general.ufw:
+    direction: incoming
+    policy: deny
+    state: enabled

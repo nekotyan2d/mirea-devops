@@ -87,3 +87,20 @@ Virtual Network Editor → vmnet8 → NAT Settings → Port Forwarding:
 - Именованные тома: `app_db_data` (`/var/lib/postgresql/data`)
 - Обратный прокси: в блоке HTTPS файла `/etc/nginx/sites-available/devops-site` добавлен `location /app/` с `proxy_pass http://127.0.0.1:5000/` и заголовками `Host`, `X-Real-IP`, `X-Forwarded-For`, `X-Forwarded-Proto`; статический ресурс сохранён
 
+
+## 10. Ansible
+
+Контроллер — Ubuntu в WSL. Узел — существующая Ubuntu Server 24.04 на VMware с Host-only IP 192.168.73.128. Рабочий inventory — ansible/inventory/prod.ini, вход — devops по ключу на TCP/2222, повышение прав — sudo без пароля. Учётная запись serv1 использовалась при установке системы. Парольный bootstrap пропущен, так как действующий SSH-доступ настроен в предыдущих работах.
+
+Роль base проверяет ОС и настраивает Docker Engine из официального APT-репозитория. Роль ssh проверяет и применяет ключ и правила SSH/UFW. Роль nginx добавляет прокси для HTTP-запросов к IP VM. Роль app загружает ghcr.io/nekotyan2d/devops-ci-app:48c369ce0fe2a0ffd703787ba912556dcc167243, запускает контейнер devops-ci-app и проверяет /health. Контейнер слушает 5000 внутри, публикация на VM — 127.0.0.1:5001. Порт 5000 на VM занят приложением предыдущей работы.
+
+Первый деплой и повторный запуск выполняются из каталога ansible в файловой системе WSL.
+
+```sh
+ansible-galaxy collection install -r requirements.yml
+ansible-playbook site.yml --syntax-check
+ansible-playbook site.yml
+ansible-playbook site.yml
+ansible-playbook verify.yml
+curl --fail http://192.168.73.128/health
+```
