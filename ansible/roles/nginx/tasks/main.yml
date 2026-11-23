@@ -1,0 +1,29 @@
+- name: Install Nginx
+  ansible.builtin.apt:
+    name: nginx
+
+- name: Install PR11 reverse proxy
+  ansible.builtin.template:
+    src: devops-ci-app.conf.j2
+    dest: /etc/nginx/sites-available/devops-ci-app
+    mode: "0644"
+  notify: [Validate Nginx, Reload Nginx]
+
+- name: Enable PR11 site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/devops-ci-app
+    dest: /etc/nginx/sites-enabled/devops-ci-app
+    state: link
+  notify: [Validate Nginx, Reload Nginx]
+
+- name: Disable default site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: [Validate Nginx, Reload Nginx]
+
+- name: Enable Nginx
+  ansible.builtin.service:
+    name: nginx
+    enabled: true
+    state: started

@@ -1,0 +1,24 @@
+- name: Pull reviewed application image
+  community.docker.docker_image:
+    name: "{{ app_image }}"
+    tag: "{{ app_tag }}"
+    source: pull
+    pull:
+      platform: linux/amd64
+
+- name: Run application container
+  community.docker.docker_container:
+    name: "{{ app_container_name }}"
+    image: "{{ app_image }}:{{ app_tag }}"
+    state: started
+    restart_policy: unless-stopped
+    published_ports:
+      - "127.0.0.1:{{ app_host_port }}:5000"
+
+- name: Check application health
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ app_host_port }}/health"
+  register: app_health
+  until: app_health.status == 200 and (app_health.json | default({})).get('status') == 'ok'
+  retries: 10
+  delay: 2

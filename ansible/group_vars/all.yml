@@ -1,0 +1,5 @@
+app_image: ghcr.io/nekotyan2d/devops-ci-app
+app_tag: "48c369ce0fe2a0ffd703787ba912556dcc167243"
+app_container_name: devops-ci-app
+app_host_port: 5001
+ssh_public_key_file: "~/.ssh/devops_vm.pub"

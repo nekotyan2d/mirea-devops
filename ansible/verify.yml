@@ -1,0 +1,37 @@
+- name: Verify deployment without changing it
+  hosts: vm
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Read effective SSH configuration
+      ansible.builtin.command: sshd -T
+      register: sshd_effective
+      changed_when: false
+
+    - name: Check authentication policy
+      ansible.builtin.assert:
+        that:
+          - "'passwordauthentication no' in sshd_effective.stdout_lines"
+          - "'permitrootlogin no' in sshd_effective.stdout_lines"
+
+    - name: Read application state
+      community.docker.docker_container_info:
+        name: "{{ app_container_name }}"
+      register: app_container
+
+    - name: Require the application to be running
+      ansible.builtin.assert:
+        that:
+          - app_container.exists
+          - app_container.container.State.Running
+
+    - name: Read application health
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ app_host_port }}/health"
+      register: app_health
+
+    - name: Check application response
+      ansible.builtin.assert:
+        that:
+          - app_health.status == 200
+          - app_health.json.status == 'ok'
